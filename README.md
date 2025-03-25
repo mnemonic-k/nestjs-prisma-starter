@@ -11,12 +11,14 @@ mutation {
 
 mutation {
   likePost(postId: "POST_ID") {
-    id
+    likeCount
   }
 }
 
 mutation {
-  unLikePost(postId: "POST_ID")
+  unLikePost(postId: "POST_ID") {
+    likeCount
+  }
 }
 
 query {

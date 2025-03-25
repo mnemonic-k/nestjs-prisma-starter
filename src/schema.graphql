@@ -49,6 +49,10 @@ type LikeConnection {
   totalCount: Int!
 }
 
+type LikeCount {
+  likeCount: Int!
+}
+
 type LikeEdge {
   cursor: String!
   node: Like!
@@ -62,11 +66,11 @@ input LoginInput {
 type Mutation {
   changePassword(data: ChangePasswordInput!): User!
   createPost(data: CreatePostInput!): Post!
-  likePost(postId: String!): Like!
+  likePost(postId: String!): LikeCount!
   login(data: LoginInput!): Auth!
   refreshToken(token: JWT!): Token!
   signup(data: SignupInput!): Auth!
-  unLikePost(postId: String!): Boolean!
+  unLikePost(postId: String!): LikeCount!
   updateUser(data: UpdateUserInput!): User!
 }
 

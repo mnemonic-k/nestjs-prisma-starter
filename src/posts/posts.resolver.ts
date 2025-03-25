@@ -23,6 +23,7 @@ import { PostOrder } from './dto/post-order.input';
 import { CreatePostInput } from './dto/createPost.input';
 import { Like } from './models/like.model';
 import { LikeConnection } from './models/like-connection.model';
+import { LikeCount } from './models/like-count.model';
 
 const pubSub = new PubSub();
 
@@ -114,7 +115,7 @@ export class PostsResolver {
   }
 
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Like)
+  @Mutation(() => LikeCount)
   async likePost(@UserEntity() user: User, @Args() args: PostIdArgs) {
     const post = await this.prisma.post.findFirst({
       where: { id: args.postId, published: true },
@@ -135,16 +136,24 @@ export class PostsResolver {
       throw new BadRequestException('Post has already been liked!');
     }
 
-    return this.prisma.like.create({
+    await this.prisma.like.create({
       data: {
         postId: post.id,
         userId: user.id,
       },
     });
+
+    const count = await this.prisma.like.count({
+      where: {
+        postId: post.id,
+      },
+    });
+
+    return new LikeCount(count);
   }
 
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean)
+  @Mutation(() => LikeCount)
   async unLikePost(@UserEntity() user: User, @Args() args: PostIdArgs) {
     const post = await this.prisma.post.findFirst({
       where: { id: args.postId, published: true },
@@ -174,7 +183,13 @@ export class PostsResolver {
       },
     });
 
-    return true;
+    const count = await this.prisma.like.count({
+      where: {
+        postId: post.id,
+      },
+    });
+
+    return new LikeCount(count);
   }
 
   @Query(() => LikeConnection)
