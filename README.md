@@ -1,3 +1,47 @@
+# Examples queries
+  
+  Go to http://localhost:3000/graphql
+
+```
+mutation {
+   login(data: { email: "lisa@simpson.com", password: "secret42" }) {
+     accessToken
+   }
+ }
+
+mutation {
+  likePost(postId: "POST_ID") {
+    id
+  }
+}
+
+mutation {
+  unLikePost(postId: "POST_ID")
+}
+
+query {
+  getPostLikes(postId: "POST_ID", first: 2) {
+    edges {
+      node {
+        id
+        postId
+        user {
+          email
+          firstname
+          lastname
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      startCursor
+    }
+    totalCount
+  }
+}
+```
+
+
 # Instructions
 
 Starter template for 😻 [NestJS](https://nestjs.com/) and [Prisma](https://www.prisma.io/).
