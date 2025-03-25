@@ -10,7 +10,7 @@ import {
 } from '@nestjs/graphql';
 import { findManyCursorConnection } from '@devoxa/prisma-relay-cursor-connection';
 import { PubSub } from 'graphql-subscriptions';
-import { UseGuards } from '@nestjs/common';
+import { BadRequestException, UseGuards } from '@nestjs/common';
 import { PaginationArgs } from '../common/pagination/pagination.args';
 import { UserEntity } from '../common/decorators/user.decorator';
 import { User } from '../users/models/user.model';
@@ -21,6 +21,8 @@ import { Post } from './models/post.model';
 import { PostConnection } from './models/post-connection.model';
 import { PostOrder } from './dto/post-order.input';
 import { CreatePostInput } from './dto/createPost.input';
+import { Like } from './models/like.model';
+import { LikeConnection } from './models/like-connection.model';
 
 const pubSub = new PubSub();
 
@@ -109,5 +111,114 @@ export class PostsResolver {
   @ResolveField('author', () => User)
   async author(@Parent() post: Post) {
     return this.prisma.post.findUnique({ where: { id: post.id } }).author();
+  }
+
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Like)
+  async likePost(@UserEntity() user: User, @Args() args: PostIdArgs) {
+    const post = await this.prisma.post.findFirst({
+      where: { id: args.postId, published: true },
+      select: {
+        id: true,
+        likes: {
+          where: { userId: user.id },
+          select: { userId: true },
+        },
+      },
+    });
+
+    if (!post) {
+      throw new BadRequestException('Post not found!');
+    }
+
+    if (post.likes?.length) {
+      throw new BadRequestException('Post has already been liked!');
+    }
+
+    return this.prisma.like.create({
+      data: {
+        postId: post.id,
+        userId: user.id,
+      },
+    });
+  }
+
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Boolean)
+  async unLikePost(@UserEntity() user: User, @Args() args: PostIdArgs) {
+    const post = await this.prisma.post.findFirst({
+      where: { id: args.postId, published: true },
+      select: {
+        id: true,
+        likes: {
+          where: { userId: user.id },
+          select: { userId: true },
+        },
+      },
+    });
+
+    if (!post) {
+      throw new BadRequestException('Post not found!');
+    }
+
+    if (!post.likes?.length) {
+      throw new BadRequestException('Post has not been liked!');
+    }
+
+    await this.prisma.like.delete({
+      where: {
+        userId_postId: {
+          userId: user.id,
+          postId: post.id,
+        },
+      },
+    });
+
+    return true;
+  }
+
+  @Query(() => LikeConnection)
+  async getPostLikes(
+    @Args() id: PostIdArgs,
+    @Args() { after, before, first, last }: PaginationArgs,
+  ) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: id.postId },
+    });
+
+    if (!post) {
+      throw new BadRequestException('Post not found!');
+    }
+
+    const likes = await findManyCursorConnection(
+      (args) =>
+        this.prisma.like.findMany({
+          where: {
+            postId: post.id,
+          },
+          select: {
+            id: true,
+            postId: true,
+            user: {
+              select: {
+                id: true,
+                firstname: true,
+                lastname: true,
+                email: true,
+              },
+            },
+          },
+          ...args,
+        }),
+      () =>
+        this.prisma.like.count({
+          where: {
+            postId: post.id,
+          },
+        }),
+      { first, last, before, after },
+    );
+
+    return likes;
   }
 }
