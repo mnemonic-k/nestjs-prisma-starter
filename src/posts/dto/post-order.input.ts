@@ -16,7 +16,7 @@ registerEnumType(PostOrderField, {
 });
 
 @InputType()
-export class PostOrder extends Order {  
+export class PostOrder extends Order {
   @Field(() => PostOrderField)
   field: PostOrderField;
 }
